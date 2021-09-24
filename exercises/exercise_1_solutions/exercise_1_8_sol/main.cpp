@@ -188,7 +188,7 @@ void setupShape(const unsigned int shaderProgram,unsigned int &VAO, unsigned int
     std::vector<float> vertexData;
     std::vector<GLint> vertexIndices;
 
-    int triangleCount = 16;
+    int triangleCount = 8;
     float PI = 3.14159265;
     float angleInterval = (2*PI) / (float)triangleCount;
 
@@ -204,6 +204,10 @@ void setupShape(const unsigned int shaderProgram,unsigned int &VAO, unsigned int
     for (int i = 0; i <= triangleCount; i++){
         float angle = i*angleInterval;
         // vertex circle at angle i*angleInterval
+        std::cout << angle << std::endl;
+        std::cout << i << " " << (cos(angle) / 2) << std::endl;
+        std::cout << i << " " << (sin(angle) / 2) << std::endl;
+
         vertexData.push_back(cos(angle) / 2);
         vertexData.push_back(sin(angle) / 2);
         vertexData.push_back(0.0f);
@@ -221,6 +225,9 @@ void setupShape(const unsigned int shaderProgram,unsigned int &VAO, unsigned int
 
     createArrayBuffer(vertexData, vertexIndices, vertexDataVBO, vertexIndicesEBO);
 
+    for(float f : vertexData) {
+        std::cout << f << std::endl;
+    }
 
     // tell how many vertices to draw,
     // no need to divide by the number of floats per vertex since we now have a list of vertex indices
