@@ -48,8 +48,8 @@ float currentTime;
 Shader* shaderProgram;
 
 float planeHeading = 0.0f;
-float tiltAngle = 0.0f;
-float planeSpeed = 0.005f;
+float tiltAngle = 4.0f;
+float planeSpeed = 0.5f;
 glm::vec2 planePosition = glm::vec2(0.0,0.0);
 
 
@@ -119,6 +119,7 @@ int main()
         std::chrono::duration<float> appTime = frameStart - begin;
         currentTime = appTime.count();
 
+        tiltAngle = .0f;
         processInput(window);
 
         glClearColor(0.5f, 0.5f, 1.0f, 1.0f);
@@ -127,6 +128,8 @@ int main()
         // notice that we now have two screen buffers, one for color image and one for depth (aka z-buffer)
         // we need to clear both at every new frame (otherwise we write on top of a previous frame!)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        planePosition = glm::vec2(0.0f, fmod(glfwGetTime() * planeSpeed, 2) - 1);
 
         shaderProgram->use();
         drawPlane();
@@ -156,10 +159,42 @@ void drawPlane(){
     //  you will need to transform the pose of the pieces of the plane by manipulating glm matrices and uploading a
     //  uniform mat4 model matrix to the vertex shader
 
-    // body
+    unsigned int modelID = glGetUniformLocation(shaderProgram->ID, "model");
+
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 scale = glm::scale(glm::vec3(0.5f));
+    glm::mat4 pos = glm::translate(glm::vec3(planePosition, 0.0f));
+    glm::mat4 tilt = glm::rotateY(tiltAngle);
+    glm::mat4 rotate = glm::rotateZ(planeHeading);
+    model = model * pos  * tilt * rotate * scale;
+    glUniformMatrix4fv(modelID, 1, GL_FALSE, &model[0][0]);
+
+    // Draw Body
     drawSceneObject(planeBody);
-    // right wing
+
+    // Draw Wings
     drawSceneObject(planeWing);
+
+    glm::mat4 mirror = glm::scale(glm::vec3(-1.0f, 1.0f,  1.0f));
+    glUniformMatrix4fv(modelID, 1, GL_FALSE, &(model * mirror)[0][0]);
+    drawSceneObject(planeWing);
+
+    glm::mat4 small = glm::scale(glm::vec3(0.5f));
+    glm::mat4 translate = glm::translate(glm::vec3(0.0f, -0.5f, 0.0f));
+
+    glUniformMatrix4fv(modelID, 1, GL_FALSE, &(model * translate * small)[0][0]);
+    drawSceneObject(planeWing);
+
+    glUniformMatrix4fv(modelID, 1, GL_FALSE, &(model * translate * small * mirror)[0][0]);
+    drawSceneObject(planeWing);
+
+    // Draw Propeller
+    glm::mat4 scaleProp = glm::scale(glm::vec3(0.5f));
+    glm::mat4 translateProp = glm::translate(glm::vec3(0.0f, 0.5f, 0.0f));
+    glm::mat4 rotateProp = glm::rotateX(glm::radians(90.0f));
+    glm::mat4 turn = glm::rotateY((float) glfwGetTime() * 5.0f);
+    glUniformMatrix4fv(modelID, 1, GL_FALSE, &(model * translateProp * scaleProp * turn * rotateProp)[0][0]);
+    drawSceneObject(planePropeller);
 
 }
 
@@ -183,6 +218,13 @@ void setup(){
                                       airplane.planeWingColors,
                                       airplane.planeWingIndices);
     planeWing.vertexCount = airplane.planeWingIndices.size();
+
+    planePropeller.VAO = createVertexArray(airplane.planePropellerVertices,
+                                           airplane.planePropellerColors,
+                                           airplane.planePropellerIndices);
+
+    planePropeller.vertexCount = airplane.planePropellerIndices.size();
+
 
 }
 
@@ -238,6 +280,18 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     // TODO 3.4 control the plane (turn left and right) using the A and D keys
+
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        planeHeading = fmod(planeHeading + 0.05f, 360.0f / M_PI);
+        tiltAngle = -45.0f;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        planeHeading = fmod(planeHeading - 0.05f, 360.0f / M_PI);
+        tiltAngle = 45.0f;
+    }
+
+
     // you will need to read A and D key press inputs
     // if GLFW_KEY_A is GLFW_PRESS, plane turn left
     // if GLFW_KEY_D is GLFW_PRESS, plane turn right
