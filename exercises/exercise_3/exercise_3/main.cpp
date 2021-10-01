@@ -48,8 +48,8 @@ float currentTime;
 Shader* shaderProgram;
 
 float planeHeading = 0.0f;
-float tiltAngle = 4.0f;
-float planeSpeed = 0.5f;
+float tiltAngle = 1.0f;
+float planeSpeed = 0.01f;
 glm::vec2 planePosition = glm::vec2(0.0,0.0);
 
 
@@ -129,8 +129,6 @@ int main()
         // we need to clear both at every new frame (otherwise we write on top of a previous frame!)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        planePosition = glm::vec2(0.0f, fmod(glfwGetTime() * planeSpeed, 2) - 1);
-
         shaderProgram->use();
         drawPlane();
 
@@ -162,11 +160,18 @@ void drawPlane(){
     unsigned int modelID = glGetUniformLocation(shaderProgram->ID, "model");
 
     glm::mat4 model = glm::mat4(1.0f);
-    glm::mat4 scale = glm::scale(glm::vec3(0.5f));
-    glm::mat4 pos = glm::translate(glm::vec3(planePosition, 0.0f));
-    glm::mat4 tilt = glm::rotateY(tiltAngle);
+    glm::mat4 scale = glm::scale(glm::vec3(0.1f));
     glm::mat4 rotate = glm::rotateZ(planeHeading);
-    model = model * pos  * tilt * rotate * scale;
+
+    planePosition.x += (rotate * glm::vec4(0.0f, planeSpeed, 0.0f, 1)).x;
+    planePosition.y += (rotate * glm::vec4(0.0f, planeSpeed, 0.0f, 1)).y;
+
+    planePosition.x = glm::mod(planePosition.x + 1.0f, 2.0f) - 1.0f;
+    planePosition.y = glm::mod(planePosition.y + 1.0f, 2.0f) - 1.0f;
+
+    glm::mat4 pos = glm::translate(planePosition.x, planePosition.y, 0.0f);
+    glm::mat4 tilt = glm::rotateY(tiltAngle);
+    model = pos * rotate * tilt * scale;
     glUniformMatrix4fv(modelID, 1, GL_FALSE, &model[0][0]);
 
     // Draw Body
@@ -282,13 +287,13 @@ void processInput(GLFWwindow *window)
     // TODO 3.4 control the plane (turn left and right) using the A and D keys
 
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        planeHeading = fmod(planeHeading + 0.05f, 360.0f / M_PI);
-        tiltAngle = -45.0f;
+        planeHeading = fmod(planeHeading + 0.05f, 180.0f / M_PI);
+        tiltAngle = -300.0f / M_PI;
     }
 
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        planeHeading = fmod(planeHeading - 0.05f, 360.0f / M_PI);
-        tiltAngle = 45.0f;
+        planeHeading = fmod(planeHeading - 0.05f, 180.0f / M_PI);
+        tiltAngle = 300.0f / M_PI;
     }
 
 
