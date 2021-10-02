@@ -57,6 +57,7 @@ const unsigned int SCR_HEIGHT = 600;
 SceneObject planeBody;
 SceneObject planeWing;
 SceneObject planePropeller;
+SceneObject arrow;
 Shader* shaderProgram;
 
 // global variables used for control
@@ -65,8 +66,10 @@ float currentTime;
 glm::vec2 clickStart(0.0f), clickEnd(0.0f);
 
 // TODO 4.1 and 4.2 - global variables you might need
-
-
+glm::vec2 planePosition = glm::vec2(0.0f, 0.0f);
+float planeHeading = 0.0;
+float planeSpeed = 0.0;
+bool arr = false;
 
 int main()
 {
@@ -142,7 +145,7 @@ int main()
         shaderProgram->use();
         // NEW!
         // we now have a function to draw the arrow too
-        drawArrow();
+        if (arr) drawArrow();
         drawPlane();
 
         glfwSwapBuffers(window);
@@ -165,14 +168,32 @@ int main()
 
 void drawArrow(){
     // TODO - 4.2 implement the draw arrow
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 translate = glm::translate(clickStart.x, clickStart.y, 0.0f);
+    float dx = clickStart.x - clickEnd.x;
+    float dy = clickStart.y - clickEnd.y;
+    float dist = glm::sqrt(dx * dx + dy * dy);
+    glm::mat4 scale = glm::scale(0.1f, dist, 1.0f);
 
+
+    glm::mat4 rotate = glm::rotateZ(planeHeading);
+
+    shaderProgram->setMat4("model", model * translate * rotate * scale);
+    arrow.drawSceneObject();
 }
 
 void drawPlane(){
     // TODO - 4.1 translate and rotate the plane
 
-    glm::mat4 rotation(1.0f);
-    glm::mat4 translation(1.0f);
+    glm::mat4 rotation = glm::rotateZ(planeHeading);
+
+
+    planePosition.x += (rotation * glm::vec4(0.0f, planeSpeed, 0.0f, 1)).x;
+    planePosition.y += (rotation * glm::vec4(0.0f, planeSpeed, 0.0f, 1)).y;
+    planePosition.x = glm::mod(planePosition.x + 1.0f, 2.0f) - 1.0f;
+    planePosition.y = glm::mod(planePosition.y + 1.0f, 2.0f) - 1.0f;
+
+    glm::mat4 translation = glm::translate(planePosition.x, planePosition.y, 0.0f);
 
     // scale matrix to make the plane 10 times smaller
     glm::mat4 scale = glm::scale(.1f, .1f, .1f);
@@ -219,7 +240,7 @@ void drawPlane(){
 
 void setup(){
     // initialize shaders
-    shaderProgram = new Shader("shader.vert", "shader.frag");
+    shaderProgram = new Shader("shaders/shader.vert", "shaders/shader.frag");
 
     PlaneModel& airplane = PlaneModel::getInstance();
     // initialize plane body mesh objects
@@ -241,6 +262,11 @@ void setup(){
     planePropeller.vertexCount = airplane.planePropellerIndices.size();
 
     // TODO 4.2 - load the arrow mesh
+    Primitives& primitives = Primitives::getInstance();
+    arrow.VAO = createVertexArray(primitives.arrowVertices,
+                                  primitives.arrowColors,
+                                  primitives.arrowIndices);
+    arrow.vertexCount = primitives.arrowIndices.size();
 
 
 }
@@ -301,11 +327,25 @@ void cursorInNdc(float screenX, float screenY, int screenW, int screenH, float &
 
 
 void cursor_input_callback(GLFWwindow* window, double posX, double posY){
+    bool down;
+
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS){
         int screenW, screenH;
         glfwGetWindowSize(window, &screenW, &screenH);
         cursorInNdc(posX, posY, screenW, screenH, clickEnd.x, clickEnd.y);
+        down = true;
     }
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE){
+        down = false;
+    }
+
+    if (down) {
+        double dx = clickStart.x - clickEnd.x;
+        double dy = clickEnd.y - clickStart.y;
+        planeHeading = std::atan2(dx, dy);
+    }
+
 }
 
 
@@ -323,12 +363,24 @@ void button_input_callback(GLFWwindow* window, int button, int action, int mods)
         // reset the end position
         cursorInNdc(screenX, screenY, screenW, screenH, clickEnd.x, clickEnd.y);
 
+        cursorInNdc(screenX, screenY, screenW, screenH, planePosition.x, planePosition.y);
+
+        planeHeading = 0;
+        planeSpeed = 0;
+        arr = true;
+
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+        double dx = clickStart.x - clickEnd.x;
+        double dy = clickEnd.y - clickStart.y;
         // set the end position
         cursorInNdc(screenX, screenY, screenW, screenH, clickEnd.x, clickEnd.y);
         // reset the start position
         cursorInNdc(screenX, screenY, screenW, screenH, clickStart.x, clickStart.y);
+
+        planeSpeed = (glm::abs(dx) + glm::abs(dy)) / 20.0f;
+
+        arr = false;
     }
 }
 
