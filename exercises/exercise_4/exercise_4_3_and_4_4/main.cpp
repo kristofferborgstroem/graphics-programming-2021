@@ -48,6 +48,7 @@ const unsigned int SCR_HEIGHT = 600;
 // global variables used for rendering
 // -----------------------------------
 SceneObject cube;
+SceneObject planeBody, planeWing, planePropeller;
 Shader* shaderProgram;
 
 // global variables used for control
@@ -145,6 +146,23 @@ int main()
     return 0;
 }
 
+glm::vec3 shoemake(glm::vec3 click, float r) {
+    if (glm::length(click) <= r) {
+        return glm::vec3(click.x, click.y, glm::sqrt(r * r - (click.x * click.x + click.y * click.y)));
+    } else {
+        return r / glm::length(click) * glm::vec3(click.x, click.y, 0);
+    }
+}
+
+glm::vec3 anderson(glm::vec3 click, float r) {
+    float w = r / glm::sqrt(2.0f);
+
+    if (glm::length(click) <= w) {
+        return glm::vec3(click.x, click.y, glm::sqrt(r * r - (click.x * click.x + click.y * click.y)));
+    }
+        return glm::vec3(click.x, click.y, r * r / (2 * glm::length(click)));
+}
+
 glm::mat4 trackballRotation(){
     glm::vec2 mouseVec =clickStart-clickEnd;
     if (glm::length(mouseVec) < 1.e-5f)
@@ -160,23 +178,31 @@ glm::mat4 trackballRotation(){
 
     // TODO - prepare the values you will use for the trackball
 
+    glm::vec3 pa;
+    glm::vec3 pc;
 
     if(g_andersonTrackball) {
         // TODO - Anderson trackball
-
-    }
-    else {
+        pa = anderson(clickStart, r);
+        pc = anderson(clickEnd, r);
+        
+    } else {
         // TODO - Shoemake trackball
-
+        pa = shoemake(clickStart, r);
+        pc = shoemake(clickEnd, r);
     }
 
     // TODO - compute rotation axis and rotation angle,
     //  can use the same code for both trackball implementations
 
+    dotProd = glm::dot(pa, pc);
+    crossProd = glm::cross(pa, pc);
+    u = crossProd / glm::length(crossProd);
+    angle = glm::atan(glm::length(crossProd), dotProd);
 
     // correction to the rotation angle
     // - not needed when we use atan with two parameters (atan2)
-    angle += dotProd < 0.f ? glm::pi<float>() : 0.f;
+    //angle += dotProd < 0.f ? glm::pi<float>() : 0.f;
 
     // we (finally) set the rotation!
     glm::mat4 rotation = glm::rotate(abs(angle), u);
@@ -194,12 +220,31 @@ void drawObject(){
     glm::mat4 scale = glm::scale(.5f, .5f, .5f);
 
     // draw cube
-    shaderProgram->setMat4("model", model * scale);
-    cube.drawSceneObject();
+    shaderProgram->setMat4("model", model);
+    //cube.drawSceneObject();
 
     // TODO 4.4 - replace the cube with the plane from exercise 4.1/4.2
+    planeBody.drawSceneObject();
+    planeWing.drawSceneObject();
 
+    glm::mat4 moveDown = glm::translate(0.0f, -.5f, 0.0f);
+    glm::mat4 mirror = glm::scale(-1.0f, 1.0f, 1.0f);
+    glm::mat4 small = glm::scale(glm::vec3(0.5f));
 
+    shaderProgram->setMat4("model", model * mirror);
+    planeWing.drawSceneObject();
+
+    shaderProgram->setMat4("model", model * moveDown * small);
+    planeWing.drawSceneObject();
+
+    shaderProgram->setMat4("model", model * moveDown * small * mirror);
+    planeWing.drawSceneObject();
+
+    glm::mat4 moveUp = glm::translate(0.0f, .5f, 0.0f);
+    glm::mat4 rotateX = glm::rotateX(90.0f / 180 * M_PI);
+    glm::mat4 rotateZ = glm::rotateZ(glfwGetTime());
+    shaderProgram->setMat4("model", model * moveUp * rotateX * rotateZ * small);
+    planePropeller.drawSceneObject();
 }
 
 
@@ -208,6 +253,7 @@ void setup(){
     // initialize shaders
     shaderProgram = new Shader("shaders/shader.vert", "shaders/shader.frag");
     Primitives& primitives = Primitives::getInstance();
+
     cube.VAO = createVertexArray(primitives.cubeVertices,
                                  primitives.cubeColors,
                                  primitives.cubeIndices);
@@ -215,7 +261,22 @@ void setup(){
 
     // TODO 4.4 - initialize the airplane parts
 
+    PlaneModel& planeModel = PlaneModel::getInstance();
+    planeBody.VAO = createVertexArray(planeModel.planeBodyVertices,
+                                      planeModel.planeBodyColors,
+                                      planeModel.planeBodyIndices);
+    planeBody.vertexCount = planeModel.planeBodyIndices.size();
 
+    planeWing.VAO = createVertexArray(planeModel.planeWingVertices,
+                                      planeModel.planeWingColors,
+                                      planeModel.planeWingIndices);
+    planeWing.vertexCount = planeModel.planeWingIndices.size();
+
+    planePropeller.VAO = createVertexArray(planeModel.planePropellerVertices,
+                                           planeModel.planePropellerColors,
+                                           planeModel.planePropellerIndices);
+
+    planePropeller.vertexCount = planeModel.planePropellerIndices.size();
 }
 
 
