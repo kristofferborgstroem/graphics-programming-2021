@@ -205,7 +205,7 @@ glm::mat4 trackballRotation(){
     //angle += dotProd < 0.f ? glm::pi<float>() : 0.f;
 
     // we (finally) set the rotation!
-    glm::mat4 rotation = glm::rotate(abs(angle), u);
+    glm::mat4 rotation = glm::rotate(abs(angle * 3), u);
 
     return rotation;
 }
@@ -242,7 +242,7 @@ void drawObject(){
 
     glm::mat4 moveUp = glm::translate(0.0f, .5f, 0.0f);
     glm::mat4 rotateX = glm::rotateX(90.0f / 180 * M_PI);
-    glm::mat4 rotateZ = glm::rotateZ(glfwGetTime());
+    glm::mat4 rotateZ = glm::rotateZ(glfwGetTime() * 4);
     shaderProgram->setMat4("model", model * moveUp * rotateX * rotateZ * small);
     planePropeller.drawSceneObject();
 }

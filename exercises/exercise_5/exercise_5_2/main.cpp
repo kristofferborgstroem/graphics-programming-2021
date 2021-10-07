@@ -60,6 +60,11 @@ glm::vec3 camForward(.0f, .0f, -1.0f);
 glm::vec3 camPosition(.0f, 1.6f, 0.0f);
 float linearSpeed = 0.15f, rotationGain = 30.0f;
 
+glm::vec2 cursorPos = glm::vec2(0.0f);
+float yaw = 0.0f;
+float pitch = 0.0f;
+glm::vec3 planePos = glm::vec3(0.0f);
+
 
 int main()
 {
@@ -173,8 +178,11 @@ void drawObjects(){
     drawCube(viewProjection * glm::translate(2.0f, 1.f, 2.0f) * glm::rotateY(glm::half_pi<float>()) * scale);
     drawCube(viewProjection * glm::translate(-2.0f, 1.f, -2.0f) * glm::rotateY(glm::quarter_pi<float>()) * scale);
 
+
+    //planePos = glm::vec3(camPosition.x + 0.5f, 1.0f, camPosition.z + 0.5f);//glm::vec3(camPosition.x + 1.0f, camPosition.y, camPosition.z + 1.0f);
     drawPlane(viewProjection * glm::translate(-2.0f, .5f, 2.0f) * glm::rotateX(glm::quarter_pi<float>()) * scale);
     drawPlane(viewProjection * glm::translate(2.0f, .5f, -2.0f) * glm::rotateX(glm::quarter_pi<float>() * 3.f) * scale);
+    //drawPlane(viewProjection * glm::translate(planePos) * glm::rotateX(glm::quarter_pi<float>() * 3.f) * scale);
 }
 
 
@@ -305,13 +313,51 @@ void cursor_input_callback(GLFWwindow* window, double posX, double posY){
     //  if you decide to use the lookAt function, make sure that the up vector and the
     //  vector from the camera position to the lookAt target are not collinear
 
+    int w, h;
+    glfwGetWindowSize(window, &w, &h);
+
+    glm::vec2 cursorLast = cursorPos;
+    cursorInRange(posX, posY, w, h, 0.0f, 1.0f, cursorPos.x, cursorPos.y);
+
+    float xoffset = cursorPos.x - cursorLast.x;
+    float yoffset = cursorPos.y - cursorLast.y;
+
+    float sensitivity = rotationGain;
+    yaw += xoffset * sensitivity;
+    pitch += yoffset * sensitivity;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    camForward = glm::normalize(front);
 }
 
 void processInput(GLFWwindow *window) {
+
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    glm::vec3 forward = camForward * linearSpeed;
+
     // TODO move the camera position based on keys pressed (use either WASD or the arrow keys)
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camPosition += glm::vec3(forward.x, 0.0f, forward.z);
+
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camPosition -= glm::vec3(forward.x, 0.0f, forward.z);
+
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camPosition -= glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * linearSpeed;
+
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camPosition += glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * linearSpeed;
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        drawPlane(glm::translate(camPosition.x, 0.0f, camPosition.z) * glm::rotateX(glm::quarter_pi<float>() * 3.f));
+    }
+
+
 
 }
 
