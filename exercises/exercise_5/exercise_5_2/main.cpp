@@ -57,13 +57,14 @@ Shader* shaderProgram;
 // ---------------------------------
 float currentTime;
 glm::vec3 camForward(.0f, .0f, -1.0f);
-glm::vec3 camPosition(.0f, 1.6f, 0.0f);
-float linearSpeed = 0.15f, rotationGain = 30.0f;
+glm::vec3 camPosition(.0f, 1.6f, -2.0f);
+float linearSpeed = 0.15f, rotationGain = 50.0f;
 
 glm::vec2 cursorPos = glm::vec2(0.0f);
 float yaw = 0.0f;
 float pitch = 0.0f;
-glm::vec3 planePos = glm::vec3(0.0f);
+float height = 1.0f;
+glm::vec3 planePos = glm::vec3(0.0f, 1.0f, 0.0f);
 
 
 int main()
@@ -166,8 +167,9 @@ void drawObjects(){
     // projection * view = world_to_view -> view_to_perspective_projection
     // or if we want ot match the multiplication order (projection * view), we could read
     // perspective_projection_from_view <- view_from_world
+    //camForward = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::mat4 projection = glm::perspectiveFov(70.0f, (float)SCR_WIDTH, (float)SCR_HEIGHT, .01f, 100.0f);
-    glm::mat4 view = glm::lookAt(camPosition, camPosition + camForward, glm::vec3(0,1,0));
+    glm::mat4 view = glm::lookAt(camPosition, planePos, glm::vec3(0,1,0));
     glm::mat4 viewProjection = projection * view;
 
     // draw floor (the floor was built so that it does not need to be transformed)
@@ -179,10 +181,11 @@ void drawObjects(){
     drawCube(viewProjection * glm::translate(-2.0f, 1.f, -2.0f) * glm::rotateY(glm::quarter_pi<float>()) * scale);
 
 
-    //planePos = glm::vec3(camPosition.x + 0.5f, 1.0f, camPosition.z + 0.5f);//glm::vec3(camPosition.x + 1.0f, camPosition.y, camPosition.z + 1.0f);
+    planePos = glm::vec3(planePos.x, 1.0f, planePos.z);
+    glm::mat4 rotatePlane = glm::rotateZ(glm::radians(180.0f)) *glm::inverse(glm::rotateZ(atan2(camForward.x, camForward.z)));
     drawPlane(viewProjection * glm::translate(-2.0f, .5f, 2.0f) * glm::rotateX(glm::quarter_pi<float>()) * scale);
     drawPlane(viewProjection * glm::translate(2.0f, .5f, -2.0f) * glm::rotateX(glm::quarter_pi<float>() * 3.f) * scale);
-    //drawPlane(viewProjection * glm::translate(planePos) * glm::rotateX(glm::quarter_pi<float>() * 3.f) * scale);
+    drawPlane(viewProjection * glm::translate(planePos) * glm::rotateX(glm::radians(90.0f)) * rotatePlane * glm::scale(.5f, .5f, .5f));
 }
 
 
@@ -324,13 +327,19 @@ void cursor_input_callback(GLFWwindow* window, double posX, double posY){
 
     float sensitivity = rotationGain;
     yaw += xoffset * sensitivity;
-    pitch += yoffset * sensitivity;
+    pitch = glm::clamp(yoffset * sensitivity, 0.5f, 1.5f);
+    height = glm::clamp(height + yoffset * sensitivity * 0.05f, 0.5f, 1.5f);
+
+
 
     glm::vec3 front;
     front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     front.y = sin(glm::radians(pitch));
     front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     camForward = glm::normalize(front);
+    camPosition.x = planePos.x + cos(glm::radians(yaw)) * 2;
+    camPosition.y = height;
+    camPosition.z = planePos.z + sin(glm::radians(yaw)) * 2;
 }
 
 void processInput(GLFWwindow *window) {
@@ -341,23 +350,26 @@ void processInput(GLFWwindow *window) {
     glm::vec3 forward = camForward * linearSpeed;
 
     // TODO move the camera position based on keys pressed (use either WASD or the arrow keys)
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camPosition += glm::vec3(forward.x, 0.0f, forward.z);
-
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        planePos -= glm::vec3(forward.x, 0.0f, forward.z);
         camPosition -= glm::vec3(forward.x, 0.0f, forward.z);
-
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camPosition -= glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * linearSpeed;
-
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camPosition += glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * linearSpeed;
-
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-        drawPlane(glm::translate(camPosition.x, 0.0f, camPosition.z) * glm::rotateX(glm::quarter_pi<float>() * 3.f));
+        std::cout << planePos.x << " " << forward.x << std::endl;
     }
 
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        planePos += glm::vec3(forward.x, 0.0f, forward.z);
+        camPosition += glm::vec3(forward.x, 0.0f, forward.z);
+    }
 
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        planePos += glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * linearSpeed;
+        camPosition += glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * linearSpeed;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        planePos -= glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * linearSpeed;
+        camPosition -= glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * linearSpeed;
+    }
 
 }
 
