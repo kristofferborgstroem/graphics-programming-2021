@@ -64,6 +64,7 @@ glm::vec2 cursorPos = glm::vec2(0.0f);
 float yaw = 0.0f;
 float pitch = 0.0f;
 float height = 1.0f;
+bool down = false;
 glm::vec3 planePos = glm::vec3(0.0f, 1.0f, 0.0f);
 
 
@@ -181,7 +182,7 @@ void drawObjects(){
     drawCube(viewProjection * glm::translate(-2.0f, 1.f, -2.0f) * glm::rotateY(glm::quarter_pi<float>()) * scale);
 
 
-    planePos = glm::vec3(planePos.x, 1.0f, planePos.z);
+    planePos = glm::vec3(planePos.x, .5f, planePos.z);
     glm::mat4 rotatePlane = glm::rotateZ(glm::radians(180.0f)) *glm::inverse(glm::rotateZ(atan2(camForward.x, camForward.z)));
     drawPlane(viewProjection * glm::translate(-2.0f, .5f, 2.0f) * glm::rotateX(glm::quarter_pi<float>()) * scale);
     drawPlane(viewProjection * glm::translate(2.0f, .5f, -2.0f) * glm::rotateX(glm::quarter_pi<float>() * 3.f) * scale);
@@ -327,8 +328,8 @@ void cursor_input_callback(GLFWwindow* window, double posX, double posY){
 
     float sensitivity = rotationGain;
     yaw += xoffset * sensitivity;
-    pitch = glm::clamp(yoffset * sensitivity, 0.5f, 1.5f);
-    height = glm::clamp(height + yoffset * sensitivity * 0.05f, 0.5f, 1.5f);
+    pitch = glm::clamp(yoffset * sensitivity, 0.2f, 2.0f);
+    height = glm::clamp(height + yoffset * sensitivity * 0.05f, 0.2f, 2.0f);
 
 
 
@@ -336,7 +337,7 @@ void cursor_input_callback(GLFWwindow* window, double posX, double posY){
     front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     front.y = sin(glm::radians(pitch));
     front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    camForward = glm::normalize(front);
+    if (down) camForward = glm::normalize(front);
     camPosition.x = planePos.x + cos(glm::radians(yaw)) * 2;
     camPosition.y = height;
     camPosition.z = planePos.z + sin(glm::radians(yaw)) * 2;
@@ -353,7 +354,6 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         planePos -= glm::vec3(forward.x, 0.0f, forward.z);
         camPosition -= glm::vec3(forward.x, 0.0f, forward.z);
-        std::cout << planePos.x << " " << forward.x << std::endl;
     }
 
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
@@ -369,6 +369,14 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         planePos -= glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * linearSpeed;
         camPosition -= glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f))) * linearSpeed;
+    }
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        down = true;
+    }
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) {
+        down = false;
     }
 
 }
