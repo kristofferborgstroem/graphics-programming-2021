@@ -31,6 +31,16 @@ namespace srl {
             std::vector<fragment> _frs;    // vector that will store the fragments
             glm::mat4 modelViewProjection = vp * m; // the matrix that transform points from local space to clipping space
 
+            processVertices(modelViewProjection, _vts);
+            assemblePrimitives(_vts);
+            clipPrimitives();
+            divideByW();
+            toScreenSpace(fb.W, fb.H);
+            backfaceCulling();
+            rasterPrimitives(_frs);
+            processFragments(_frs);
+            writeToFrameBuffer(_frs, fb, db);
+
             //  MIND THAT THE METHODS BELOW ARE NOT DECLARED/DEFINED IN THE RIGHT ORDER!
 
         }
