@@ -163,7 +163,6 @@ int main()
 
         glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         shader->use();
         drawObjects();
 
@@ -260,11 +259,24 @@ void drawObjects(){
 
     // TODO exercise 8 - set the missing uniform variables here
     // light uniforms
+    shader->setVec3("ambientLightColor", config.ambientLightColor);
+    shader->setVec3("light1Position", config.light1Position);
+    shader->setVec3("light1Color", config.light1Color * config.light1Intensity);
+
+    shader->setVec3("light2Position", config.light2Position);
+    shader->setVec3("light2Color", config.light2Color * config.light2Intensity);
 
     // material uniforms
+    shader->setVec3("reflectionColor", config.reflectionColor);
+    shader->setFloat("ambientReflectance", config.ambientReflectance);
+    shader->setFloat("diffuseReflectance", config.diffuseReflectance);
+    shader->setFloat("specularReflectance", config.specularReflectance);
+    shader->setFloat("specularExponent", config.specularExponent);
 
     // attenuation uniforms
-
+    shader->setFloat("attenuationC0", config.attenuationC0);
+    shader->setFloat("attenuationC1", config.attenuationC1);
+    shader->setFloat("attenuationC2", config.attenuationC2);
 
 
     // the typical transformation uniforms are already set for you, these are:
