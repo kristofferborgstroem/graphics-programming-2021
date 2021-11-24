@@ -1,4 +1,4 @@
-# obtain the list of subdirectories
+  # obtain the list of subdirectories
 SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_LIST_DIR})
 
 
