@@ -35,12 +35,14 @@ void main()
 {
 
    // TODO Exercise 9.3 sample texture_diffuse1 color and use it for ambient and diffuse light computation, read it as a vec4
-   vec3 color = vec3(1,1,1); // white, replace this
+   vec4 albedo = texture(texture_normal1, fs_in.textCoord); // white, replace this
+   vec3 color = albedo.rgb;
    // TODO Exercise 9.5 instead of using the texture above, sample texture_normal1 for ambient and diffuse light computation
    //  (this will be the topic of our next class)
 
 
    // TODO Exercise 9.4 sample texture_ambient1 and use component r to modulate light intensity
+   vec4 ao = texture(texture_ambient1, fs_in.textCoord);
 
    // TODO Exercise 9.4 interpolate between '1.0' and 'ambientOcclusion' using the 'ambientOcclusionMix' parameter and the 'mix' function
 
@@ -48,7 +50,7 @@ void main()
 
 
    // ambient component
-   vec3 ambient = ambientLightColor * color;
+   vec3 ambient = ambientLightColor * color * mix(1.0, ao.r, ambientOcclusionMix);
 
    // diffuse component
    // L: vertex to light vector
@@ -67,5 +69,5 @@ void main()
    float attenuation =  1.0 / (attenuationC0 + attenuationC1 * dist + attenuationC2 * dist * dist);
 
    // TODO Exercise 9.4 modulate the color using the interpolated ambient occlusion value
-   FragColor = vec4((ambient + (diffuse + specular) * attenuation) , 1.0);
+   FragColor = vec4((ambient + (diffuse + specular) * attenuation) , albedo.a);
 }

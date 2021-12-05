@@ -77,7 +77,7 @@ struct Config {
     float attenuationC2 = 0.1;
 
     // TODO exercise 9.2 scale config variable
-
+    float uvScale = 20.0f;
 
     // floor texture mode
     unsigned int wrapSetting = GL_REPEAT;
@@ -166,6 +166,7 @@ int main()
     // render loop
     while (!glfwWindowShouldClose(window))
     {
+
         static float lastFrame = 0.0f;
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -217,7 +218,31 @@ void loadFloorTexture(){
     // TODO this is mostly a copy and paste of the function 'TextureFromFile' in the 'model.h' file
     //  however, you should use the min/mag/wrap settings that you can control in the user interface
     //  and load the texture 'floor/checkboard_texture.png'
+    string filename = "floor/FloorAlbedo.jpg";
 
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format = GL_RGB;
+
+        glBindTexture(GL_TEXTURE_2D, floorTextureId);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, config.wrapSetting);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, config.wrapSetting);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, config.minFilterSetting);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, config.magFilterSetting);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << filename << std::endl;
+        stbi_image_free(data);
+    }
 }
 
 // --------------
@@ -256,6 +281,7 @@ void drawGui(){
         ImGui::Separator();
 
         ImGui::Text("Wrap setting: ");
+        ImGui::SliderFloat("uvScale", &config.uvScale, 0.0f, 40.0f);
         if(ImGui::RadioButton("CLAMP_TO_EDGE", config.wrapSetting == GL_CLAMP_TO_EDGE)) {config.wrapSetting = GL_CLAMP_TO_EDGE;loadFloorTexture();} ImGui::SameLine();
         if(ImGui::RadioButton("CLAMP_TO_BORDER", config.wrapSetting == GL_CLAMP_TO_BORDER)) {config.wrapSetting = GL_CLAMP_TO_BORDER;loadFloorTexture();}
         if(ImGui::RadioButton("MIRRORED_REPEAT", config.wrapSetting == GL_MIRRORED_REPEAT)) {config.wrapSetting = GL_MIRRORED_REPEAT;loadFloorTexture();} ImGui::SameLine();
@@ -305,7 +331,7 @@ void drawFloor(){
     floorShader->setFloat("attenuationC2", config.attenuationC2);
 
     // TODO exercise 9.2 send uvScale to the shader as a uniform variable
-
+    floorShader->setFloat("uvScale", config.uvScale);
 
 
     // camera parameters
